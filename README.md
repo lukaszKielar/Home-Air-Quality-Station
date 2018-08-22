@@ -22,6 +22,6 @@ To compile sketch please download [Arduino IDE](https://www.arduino.cc/en/Main/S
 
 ## Hardware Connection
 ### Circuit scheme
-Please be aware that project relies on DOIT ESP32 DevKit V1 and was not tested with any other ESP32 microcontrollers. Pin definitions may be slightly different, please refer to your microcontroller datasheet and compare it with [DOIT ESP32 DevKit V1](https://raw.githubusercontent.com/playelek/pinout-doit-32devkitv1/master/pinoutDOIT32devkitv1.png).
+Please be aware that project relies on DOIT ESP32 DevKit V1 and was not tested with any other ESP32 microcontroller. Pin definitions may be slightly different, please refer to your microcontroller datasheet and compare it with [DOIT ESP32 DevKit V1](https://raw.githubusercontent.com/playelek/pinout-doit-32devkitv1/master/pinoutDOIT32devkitv1.png).
 
 ![img](./circuit/circuit.png)
