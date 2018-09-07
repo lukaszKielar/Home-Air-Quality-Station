@@ -1,1 +1,4 @@
+.git
 python/.ipynb_checkpoints/
+python/*.csv
+python/*.html
