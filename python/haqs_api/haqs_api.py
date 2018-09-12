@@ -378,7 +378,6 @@ def create_readings_table(conn):
 
 def return_sensors_ids(conn):
     sql = "SELECT sensor_id FROM sensors;"
-
     cur = conn.cursor()
     cur.execute(sql)
     sensors_ids = [values[0] for values in cur.fetchall()]
@@ -389,7 +388,6 @@ def db_insert_sensor_readings(conn, *args):
     """
     Function inserts multiple readings for sensor
     """
-
     sql =   """
                 INSERT INTO readings (sensor_id, date, reading)
                 SELECT %s, %s, %s
@@ -400,3 +398,9 @@ def db_insert_sensor_readings(conn, *args):
                     )
             """
     execute_sql(conn, sql, *args)
+
+
+def return_readings_df(conn):
+    sql = "SELECT * FROM public.readings"
+    readings_df = pd.read_sql_query(sql,con=conn)
+    return readings_df
