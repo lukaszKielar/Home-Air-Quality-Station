@@ -16,7 +16,6 @@ from bokeh.tile_providers import CARTODBPOSITRON, STAMEN_TERRAIN, STAMEN_TONER
 import psycopg2
 
 NoneType = type(None)
-coord_system = from_epsg(4326)  # lon, lat WGS84
 
 stations_request = "http://api.gios.gov.pl/pjp-api/rest/station/findAll"
 sensors_request = "http://api.gios.gov.pl/pjp-api/rest/station/sensors/"  # {stationId} needed
@@ -86,7 +85,7 @@ def create_stations_gdf(stations_json, map=False):
         stations_dict["geometry"] = station_geometries
 
     stations_df = gpd.GeoDataFrame(stations_dict)
-    stations_df.crs = coord_system
+    stations_df.crs = from_epsg(4326)
 
     return stations_df
 
@@ -186,7 +185,7 @@ def get_param_df(stations_df, sensors_df, parameter):
     param_df = sensors_df[sensors_df["parameter"] == "{}".format(parameter)]
     param_df = gpd.GeoDataFrame(pd.merge(param_df, stations_df, on='station_id'))
     param_df.dropna(inplace=True)
-    param_df.crs = coord_system
+    param_df.crs = from_epsg(4326)
 
     return param_df
 
@@ -228,13 +227,13 @@ def show_readings_map(param_df, tile=CARTODBPOSITRON):
 
 def connect_with_db():
     """
-    Function connects wirh PostgreSQL DataBase
+    Function connects with PostgreSQL DataBase
     and returns connection object if connection
     was succesfully established
     """
     try:
         conn = psycopg2.connect("dbname='haqs' user='postgres' host='localhost' password='postgres'")
-        print("Successfully conected with DataBase!")
+        print("Successfully connected with DataBase!")
         return conn
     except Exception as e:
         print(e)
@@ -260,19 +259,21 @@ def execute_sql(conn, sql, *args):
     statement run.
     """
     cur = conn.cursor()
-    cur.execute('SAVEPOINT sp1')  # create database savepoint
-    print("SAVEPOINT created!")
+    cur.execute('SAVEPOINT sp1;')  # create database savepoint
+    # print("SAVEPOINT created!")
     try:
         cur.execute(sql, tuple(args))
         conn.commit()
-        print("SQL was successfully executed!")
+        #print("SQL was successfully executed!")
     except Exception as e:
         print(e)
-        cur.execute('ROLLBACK TO SAVEPOINT sp1')  # rollback to savepoint
-        print("Rollback to SAVEPOINT!")
-    finally:
-        cur.execute('RELEASE SAVEPOINT sp1')  # release savepoint
+        cur.execute('ROLLBACK TO SAVEPOINT sp1;')  # rollback to savepoint
+        # print("Rollback to SAVEPOINT!")
+    """
+    else:
+        cur.execute('RELEASE SAVEPOINT sp1;')  # release savepoint
         print("SAVEPOINT released!")
+    """
 
 
 def show_database_tables(conn):
@@ -303,3 +304,99 @@ def db_insert_station(conn, *args):
             """
     execute_sql(conn, sql, *args)
 
+
+def show_insertions(conn, table="stations"):
+    sql = "SELECT * FROM public.{};".format(table)
+
+    cur = conn.cursor()
+    cur.execute('SAVEPOINT sp1;')  # create database savepoint
+    print("SAVEPOINT created!")
+    try:
+        cur.execute(sql)
+        conn.commit()
+        print("SQL was successfully executed!")
+        columns = [desc[0] for desc in cur.description]
+        df = pd.DataFrame(cur.fetchall(), columns=columns)
+        return df
+    except Exception as e:
+        print(e)
+        cur.execute('ROLLBACK TO SAVEPOINT sp1;')  # rollback to savepoint
+        print("Rollback to SAVEPOINT!")
+    else:
+        cur.execute('RELEASE SAVEPOINT sp1;')  # release savepoint
+        print("SAVEPOINT released!")
+
+
+def return_stations_gdf(conn):
+    sql = "SELECT * FROM public.stations;"
+    try:
+        return gpd.read_postgis(sql, conn, geom_col='geom')
+    except Exception as e:
+        print(e)
+
+
+def create_sensors_table(conn):
+    sql =   """
+                CREATE TABLE public.sensors
+                (
+                    sensor_id INTEGER PRIMARY KEY,
+                    sensor_parameter VARCHAR(10) NOT NULL,
+                    station_id INTEGER REFERENCES stations (station_id)
+                );
+            """
+    execute_sql(conn, sql)
+
+
+def db_insert_sensor(conn, *args):
+    """
+    Function inserts sensors with its coordinates to Sensor Table
+    """
+    sql =   """
+                INSERT INTO public.sensors (sensor_id, sensor_parameter, station_id)
+                VALUES (%s, %s, %s);
+            """
+    execute_sql(conn, sql, *args)
+
+
+def return_sensors_df(conn):
+    sql = "SELECT * FROM public.sensors"
+    sensors_df = pd.read_sql_query(sql, con=conn)
+    return sensors_df
+
+
+def create_readings_table(conn):
+    sql =   """
+                CREATE TABLE public.readings 
+                (
+                    sensor_id INTEGER REFERENCES sensors (sensor_id),
+                    date VARCHAR(19) NOT NULL,
+                    reading FLOAT(4)
+                );
+            """
+    execute_sql(conn, sql)
+
+
+def return_sensors_ids(conn):
+    sql = "SELECT sensor_id FROM sensors;"
+
+    cur = conn.cursor()
+    cur.execute(sql)
+    sensors_ids = [values[0] for values in cur.fetchall()]
+    return sensors_ids
+
+
+def db_insert_sensor_readings(conn, *args):
+    """
+    Function inserts multiple readings for sensor
+    """
+
+    sql =   """
+                INSERT INTO readings (sensor_id, date, reading)
+                SELECT %s, %s, %s
+                WHERE
+                    NOT EXISTS
+                    (
+                        SELECT * FROM readings WHERE date = %s AND sensor_id = %s
+                    )
+            """
+    execute_sql(conn, sql, *args)
