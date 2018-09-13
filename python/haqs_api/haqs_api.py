@@ -402,5 +402,5 @@ def db_insert_sensor_readings(conn, *args):
 
 def return_readings_df(conn):
     sql = "SELECT * FROM public.readings"
-    readings_df = pd.read_sql_query(sql,con=conn)
+    readings_df = pd.read_sql_query(sql, con=conn)
     return readings_df

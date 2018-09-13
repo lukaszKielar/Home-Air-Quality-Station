@@ -208,6 +208,7 @@ dependencies:
   - zope.interface=4.5.0=py36h14c3975_0
   - altair=2.2.2=py_0
   - branca=0.3.0=py_0
+  - django-leaflet=0.24.0=py_0
   - folium=0.6.0=py_0
   - geopandas=0.4.0=py_0
   - vincent=0.4.4=py_1

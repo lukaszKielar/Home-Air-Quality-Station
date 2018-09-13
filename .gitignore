@@ -1,5 +1,6 @@
 ..gitignore.swp
 .git
+webapp/
 python/haqs_api/__pycache__/
 python/haqs_api/__pycache__/*.pyc
 python/.ipynb_checkpoints/
