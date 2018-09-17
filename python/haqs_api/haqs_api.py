@@ -1,3 +1,4 @@
+from datetime import datetime
 import requests
 import numpy as np
 import pandas as pd
@@ -264,7 +265,7 @@ def execute_sql(conn, sql, *args):
     try:
         cur.execute(sql, tuple(args))
         conn.commit()
-        #print("SQL was successfully executed!")
+        # print("SQL was successfully executed!")
     except Exception as e:
         print(e)
         cur.execute('ROLLBACK TO SAVEPOINT sp1;')  # rollback to savepoint
@@ -310,21 +311,23 @@ def show_insertions(conn, table="stations"):
 
     cur = conn.cursor()
     cur.execute('SAVEPOINT sp1;')  # create database savepoint
-    print("SAVEPOINT created!")
+    # print("SAVEPOINT created!")
     try:
         cur.execute(sql)
         conn.commit()
-        print("SQL was successfully executed!")
+        # print("SQL was successfully executed!")
         columns = [desc[0] for desc in cur.description]
         df = pd.DataFrame(cur.fetchall(), columns=columns)
         return df
     except Exception as e:
         print(e)
         cur.execute('ROLLBACK TO SAVEPOINT sp1;')  # rollback to savepoint
-        print("Rollback to SAVEPOINT!")
+        # print("Rollback to SAVEPOINT!")
+    """
     else:
         cur.execute('RELEASE SAVEPOINT sp1;')  # release savepoint
         print("SAVEPOINT released!")
+    """
 
 
 def return_stations_gdf(conn):
@@ -362,6 +365,18 @@ def return_sensors_df(conn):
     sql = "SELECT * FROM public.sensors"
     sensors_df = pd.read_sql_query(sql, con=conn)
     return sensors_df
+
+
+def return_sensors_gdf(conn):
+    sql =   """
+                SELECT sensors.sensor_id, sensors.sensor_parameter, sensors.station_id, stations.geom
+                FROM sensors, stations
+                WHERE sensors.station_id = stations.station_id;
+            """
+    try:
+        return gpd.read_postgis(sql, conn, geom_col='geom')
+    except Exception as e:
+        print(e)
 
 
 def create_readings_table(conn):
@@ -404,3 +419,44 @@ def return_readings_df(conn):
     sql = "SELECT * FROM public.readings"
     readings_df = pd.read_sql_query(sql, con=conn)
     return readings_df
+
+
+def return_readings_gdf(conn, limit=100):
+    sql =   """
+                SELECT readings.sensor_id, readings.date, readings.reading,
+                    sensors.sensor_parameter, sensors.station_id, stations.geom
+                FROM readings
+                INNER JOIN sensors on readings.sensor_id = sensors.sensor_id
+                INNER JOIN stations on sensors.station_id = stations.station_id
+                ORDER BY date DESC
+                LIMIT {};
+            """.format(limit)
+    try:
+        return gpd.read_postgis(sql, conn, geom_col='geom')
+    except Exception as e:
+        print(e)
+
+
+def return_parameter_gdf(conn, parameter='PM10'):
+    """
+    Available parameters:
+        NO2, O3, CO, PM2.5, PM10, C6H6, SO2
+    Returns readings from last hour
+    """
+    # create string used for query
+    now = datetime.now().strftime("%Y-%m-%d {}:00:00".format(int(datetime.now().strftime("%H"))-1))
+    sql =   """
+                SELECT readings.sensor_id, readings.date, readings.reading,
+                    sensors.sensor_parameter, sensors.station_id, stations.geom
+                FROM readings
+                INNER JOIN sensors on readings.sensor_id = sensors.sensor_id
+                INNER JOIN stations on sensors.station_id = stations.station_id
+                WHERE sensors.sensor_parameter = '{}'
+                    AND readings.date = '{}'
+                ORDER BY date DESC
+                ;
+            """.format(parameter, now)
+    try:
+        return gpd.read_postgis(sql, conn, geom_col='geom')
+    except Exception as e:
+        print(e)
