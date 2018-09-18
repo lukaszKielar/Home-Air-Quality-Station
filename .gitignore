@@ -8,5 +8,6 @@ python/*.html
 webapp/webapp/__pycache__/
 webapp/webapp/settings.py
 webapp/stations/admin.py
+webapp/stations/migrations/
 webapp/stations/__pycache__/
 webapp/stations/migrations/__pycache__/
