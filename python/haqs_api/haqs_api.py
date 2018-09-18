@@ -383,6 +383,7 @@ def create_readings_table(conn):
     sql =   """
                 CREATE TABLE public.readings 
                 (
+                    id INTEGER PRIMARY KEY,
                     sensor_id INTEGER REFERENCES sensors (sensor_id),
                     date VARCHAR(19) NOT NULL,
                     reading FLOAT(4)
