@@ -89,12 +89,15 @@ void setup()
     Serial1.println("Couldn't find RTC");
     while (1);
   }
-
-  Serial1.println("Time setting!");
-  // following line sets the RTC to the date & time this sketch was compiled
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  // manual time adjust
-  // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+    
+  if (rtc.lostPower())
+  {
+    Serial1.println("Time setting!");
+    // following line sets the RTC to the date & time this sketch was compiled
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // manual time adjust
+    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+  }
 
   initSensor();  // BME280 sensor initialization
 }
