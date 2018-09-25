@@ -40,6 +40,9 @@ Many ESP8266 boards use CH340 chip to provide USB connectivity and in some cases
 2. Download and install drivers from manufacturer website.
 3. Feel free to use your board.
 
+\* Linux users may need to run following command ```sudo usermod -a -G dialout $USER``` to allow non-root access to /dev/ttyUSB0. Reboot your system to apply changes.
+
+
 ## Hardware Connection
 ### Circuit scheme
 Please be aware that project relies on DOIT ESP32 DevKit V1 and was not tested with any other ESP32 microcontroller. Pin definitions may be slightly different, please refer to your microcontroller datasheet and compare it with [DOIT ESP32 DevKit V1](https://raw.githubusercontent.com/playelek/pinout-doit-32devkitv1/master/pinoutDOIT32devkitv1.png).
