@@ -1,5 +1,6 @@
 ..gitignore.swp
 .git
+wifi_config.h
 python/haqs_api/__pycache__/
 python/haqs_api/__pycache__/*.pyc
 python/.ipynb_checkpoints/
