@@ -12,7 +12,7 @@ Project was developped using DOIT ESP32 DevKit V1 microcontroller with following
 * Breadboard
 
 ### Software
-To compile sketch please download [Arduino IDE](https://www.arduino.cc/en/Main/Software) and add following libraries either manually or through the library manager:
+To compile sketch please download [Arduino IDE](https://www.arduino.cc/en/Main/Software) and add following libraries either manually or through the *Library Manager*:
 * [BME280_I2C_ESP32](https://github.com/Takatsuki0204/BME280-I2C-ESP32)
 * [PMS Library](https://github.com/fu-hsi/PMS)
 * [RTClib](https://github.com/adafruit/RTClib)
@@ -23,25 +23,24 @@ To compile sketch please download [Arduino IDE](https://www.arduino.cc/en/Main/S
 #### Additional settings
 In order to use ESP8266/ESP32 boards we have to add additional URL's into *Boards Manager*.
 1. Open Arduino IDE, go to *Preferences* and add following ESP cores into *Additional Board Manager URLs* (multiple paths can be added, we just need to separate them by commas).
-> http://arduino.esp8266.com/stable/package_esp8266com_index.json
-> https://dl.espressif.com/dl/package_esp32_index.json
+    * http://arduino.esp8266.com/stable/package_esp8266com_index.json
+    * https://dl.espressif.com/dl/package_esp32_index.json
 2. Confirm changes, go to main window and select *Tools* > *Board:...* > *Boards Manager...*
-3. When new window shows up type *esp8266* and install ***esp8266 by ESP8266 Community***.
-4. When installation has been finished look for *esp32* and install ***esp32 by Espressif Systems***.
-5. Once its installed we are ready to programm ESP8266/ESP32 boards using Arduino IDE.
+3. Install ***esp8266 by ESP8266 Community*** and ***esp32 by Espressif Systems***.
+4. When installation has been finished restart Arduino IDE.
+5. We are ready to use our boards.
 
 \* Complete installation instructions can be found under following links:
 * [ESP8266](https://github.com/esp8266/Arduino)
 * [ESP32](https://github.com/espressif/arduino-esp32)
 
 #### CH340 Chip drivers
-Many ESP8266 boards use CH340 chip to provide USB connectivity and in some cases users may need to install additional drivers. Following procedures were successfully tested on macOS High Sierra, Ubuntu and Windows 7.
-1. Visit [this website](https://sparks.gogo.co.nz/ch340.html) and select your platform.
-2. Download and install drivers from manufacturer website.
-3. Feel free to use your board.
+Many ESP8266 boards use CH340 chip to provide USB connectivity and in some cases users may need to install additional drivers. Select and download drivers from chip manufacturers [website](https://sparks.gogo.co.nz/ch340.html). Following procedures were successfully tested on macOS High Sierra and Windows 7. Ubuntu doesn't require drivers to be installed.
 
-\* Linux users may need to run following command ```sudo usermod -a -G dialout $USER``` to allow non-root access to /dev/ttyUSB0. Reboot your system to apply changes.
-
+\* Linux Users
+* Linux users may need to run following command ```sudo usermod -a -G dialout $USER``` to allow non-root access to /dev/ttyUSB0. Reboot your system to apply changes.
+* If you are using python distributions other than default (i.e. anaconda/miniconda) you may need to install pySerial module first for your default distribution.
+```sudo /usr/bin/python2 -m pip install pyserial```
 
 ## Hardware Connection
 ### Circuit scheme
