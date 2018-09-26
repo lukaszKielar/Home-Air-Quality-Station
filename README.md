@@ -15,6 +15,7 @@ Project was developped using DOIT ESP32 DevKit V1 microcontroller with following
 To compile sketch please download [Arduino IDE](https://www.arduino.cc/en/Main/Software) and add following libraries either manually or through the library manager:
 * [BME280_I2C_ESP32](https://github.com/Takatsuki0204/BME280-I2C-ESP32)
 * [PMS Library](https://github.com/fu-hsi/PMS)
+* [PubSubClient](https://github.com/knolleary/pubsubclient)
 * [RTClib](https://github.com/adafruit/RTClib)
 * [ESP32 OLED Driver for SSD1306 display](https://github.com/ThingPulse/esp8266-oled-ssd1306) (*optional)
 
