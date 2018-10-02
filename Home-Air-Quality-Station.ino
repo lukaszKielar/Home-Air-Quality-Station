@@ -15,16 +15,24 @@ Monitoring station was built using
 Following libraries was used for this project
   https://github.com/Takatsuki0204/BME280-I2C-ESP32
   https://github.com/fu-hsi/PMS
+  https://github.com/knolleary/pubsubclient
   https://github.com/ThingPulse/esp8266-oled-ssd1306 (optional)
   https://github.com/adafruit/RTClib (optional)
 
-DOIT ESP32 DEVKIT V1 PIN DEFINITION: 
+DOIT ESP32 DEVKIT V1 PIN DEFINITION:
   SDA - 21
   SCL - 22
 
 Notes:
-To avoid problems with pin definition, Serial2 pins
-have been changed from 9, 10 to 4, 2 in HardwareSerial.cpp
+Readings can be vieved using 2 available ESP32 serial monitors.
+To avoid problems with pin definition, Serial1 pins
+have been changed from 9, 10 to 4, 2 as follows:
+  #define RX1 4
+  #define TX1 2
+Sketch may not compile without this change.
+Serial2 does not require redefinition.
+Further explanation can be found on Andreas Spiess account:
+https://www.youtube.com/watch?v=GwShqW39jlE
 
 To make sure I2C addresses were parsed correctly you can use
 I2C scanner sketch available on github
@@ -50,7 +58,7 @@ By default sensors uses following i2c addresses:
 #define I2C_SDA 21
 #define I2C_SCL 22
 #define BME280_ADDRESS 0x76
-/* 
+/*
 If the sensor does not work, try the 0x77 address as well
 or try to scan your connection with i2c scanner
 */
@@ -83,7 +91,7 @@ char rtc_second[20];
 long last_msg = 0;
 char pm1pt_msg[20];
 char pm2pt5_msg[20];
-char pm10pt_msg[20];    
+char pm10pt_msg[20];
 char temp_msg[20];
 char humid_msg[20];
 char pressure_msg[20];
@@ -95,19 +103,19 @@ void setup()
   Serial2.begin(9600);  // GPIO2 (ESP32 D2 pin)
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  
+
   // Initialising the UI will init the display too.
   display.init();
 
   display.flipScreenVertically();
   display.setFont(ArialMT_Plain_10);
 
-  if (!rtc.begin()) 
+  if (!rtc.begin())
   {
     Serial2.println("Couldn't find RTC");
     while (1);
   }
-    
+
   if (rtc.lostPower())
   {
     Serial2.println("Time setting!");
@@ -135,23 +143,23 @@ void loop()
   }
 
   client.loop();
-  
+
   String rtc_string = returnDatetime();
   Serial2.println(rtc_string);  // print date & time using serial monitor
-  
+
   display.clear();  // clear the display
 
   // write date & time to oled display
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   display.drawString(0, 0, rtc_string);
   display.drawHorizontalLine(0, 15, display.getStringWidth(rtc_string));
-  
+
   Serial2.println("Data:");
   readBME();  // write BME280 readings to the display and serial monitor
   readPMS();  // write PMS7003 readings to the display and serial monitor
 
   display.drawString(0, 80, "Home Air Monitoring Station");
-  
+
   Serial2.println();
   // delay(60000);  // wait 1 minute
   display.display();
@@ -162,7 +170,7 @@ void loop()
 void initBME280()
 {
   bool status = bme.begin(BME280_ADDRESS);
-  if (!status) 
+  if (!status)
   {
     Serial2.println("Could not find a valid BME280 sensor, check wiring!");
     while (1);
@@ -184,7 +192,7 @@ void readBME()
     Serial2.println(t);
     display.drawString(0, 20, "Temperature " + String(t) + " [*C]");
   }
-  
+
   if (!isnan(h))
   {
     Serial2.print("Humidity (%): ");
@@ -227,7 +235,7 @@ void readPMS()
 String returnDatetime()
 {
   DateTime now = rtc.now();
-  
+
   // TIME
   uint8_t int_hour = now.hour();
   uint8_t int_minute = now.minute();
@@ -235,7 +243,7 @@ String returnDatetime()
   snprintf (rtc_hour, 20, "%.2i", int_hour);
   snprintf (rtc_minute, 20, "%.2i", int_minute);
   snprintf (rtc_second, 20, "%.2i", int_second);
-  
+
   //DATE
   uint8_t int_day = now.day();
   uint8_t int_month = now.month();
@@ -270,7 +278,7 @@ void connectMqtt()
   while (!client.connected())
   {
     Serial2.println("MQTT connecting ...");
-    
+
     if (client.connect("ESP32 Client", MQTT_USER, MQTT_PASSWORD))
     {
       Serial2.println("Connected to MQTT");
@@ -279,7 +287,7 @@ void connectMqtt()
     {
       Serial2.println("ERROR. Failed with state ");
       Serial2.print(client.state());
-      
+
       Serial2.println("Try again in 2 seconds");
       delay(2000);
     }

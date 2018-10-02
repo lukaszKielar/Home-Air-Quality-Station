@@ -38,7 +38,7 @@ In order to use ESP8266/ESP32 boards we have to add additional URL's into *Board
 #### CH340 Chip drivers
 Many ESP8266 boards use CH340 chip to provide USB connectivity and in some cases users may need to install additional drivers. Select and download drivers from chip manufacturers [website](https://sparks.gogo.co.nz/ch340.html). Following procedures were successfully tested on macOS High Sierra and Windows 7. Ubuntu doesn't require drivers to be installed.
 
-\* Linux Users
+** \*Linux Users**
 * Linux users may need to run following command ```sudo usermod -a -G dialout $USER``` to allow non-root access to /dev/ttyUSB0. Reboot your system to apply changes.
 * If you are using python distributions other than default (i.e. anaconda/miniconda) you may need to install pySerial module first for your default distribution.
 ```sudo /usr/bin/python2 -m pip install pyserial```
