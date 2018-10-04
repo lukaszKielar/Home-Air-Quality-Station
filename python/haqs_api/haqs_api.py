@@ -26,31 +26,68 @@ aq_index_request = "http://api.gios.gov.pl/pjp-api/rest/aqindex/getIndex/"  # {s
 
 def get_stations():
     """
-    Function returns station JSON file requested from GIOS API
+    Function returns list of dictionaries
+    with requested air quality stations.
+
+    Function has been deprecated since PostgreSQL
+    Database was added to the project.
+
+    Args:
+        None
+
+    Returns:
+        stations_json (list):
+            list of GIOŚ air quality stations
+            represented as dictionaries
+
+    Example:
+        In [1]: stations_json = get_stations()
+        In [2]: print(stations_json[0])
+                {'id': 114,
+                'stationName': 'Wrocław - Bartnicza',
+                'gegrLat': '51.115933',
+                'gegrLon': '17.141125',
+                'city': {'id': 1064,
+                        'name': 'Wrocław',
+                        'commune': {'communeName': 'Wrocław',
+                                    'districtName': 'Wrocław',
+                                    'provinceName': 'DOLNOŚLĄSKIE'}},
+                'addressStreet': 'ul. Bartnicza'}
     """
     return requests.get(stations_request).json()
 
 
 def create_stations_gdf(stations_json, map=False):
     """
-    Function returns stations GeoDataFrame.
-    Function has been deprecated since PostgreSQL Database
-    was added to the project.
+    Function returns GeoDataFrame of air quality stations.
 
-    params
-    -------------
-        stations (dict):
-            JSON object requested from GIOŚ API
+    Function has been deprecated since PostgreSQL
+    Database was added to the project.
 
-        map (bool):
+    Args:
+        stations_json (list):
+            list of GIOŚ air quality stations
+            represented as dictionaries
+
+        map (bool) - default False:
             boolean used for additional output
             necessary for folium map
 
-    returns
-    -------------
+    Returns:
         stations_df (gpd.GeoDataFrame):
             geopandas GeoDataFrame with all
             available air monitoring stations
+
+    Example:
+        In [1]: stations_json = get_stations()
+        In [2]: stations_df = create_stations_gdf(stations_json)
+                stations_df.head()
+        Out[2]: 	station_id	  geometry
+                0   114           POINT (17.141125 51.115933)
+                1	117           POINT (17.02925 51.129378)
+                2	129	          POINT (17.012689 51.086225)
+                3   52            POINT (16.180513 51.204503)
+                4	109	          POINT (16.269677 50.768729)
     """
     stations_dict = {}
     station_ids = []
@@ -95,6 +132,19 @@ def create_stations_map(stations_json):
     """
     Function returns folium map with GIOS
     air monitoring stations in Poland
+
+    Args:
+        stations_json (list):
+            list of GIOŚ air quality stations
+            represented as dictionaries
+
+    Returns:
+        stations_map (folium.Map):
+            folium map with requested air quality stations
+
+    Example:
+        In [1]: stations_json = get_stations()
+        In [2]: create_stations_map(stations_json)
     """
     stations_map = folium.Map([52, 19], zoom_start=6, tiles='Stamen Terrain')
 
@@ -106,7 +156,7 @@ def create_stations_map(stations_json):
     for point in range(len(stations_df)):
         folium.Marker(locations_list[point],
                       popup=stations_df['station_name'][point]).add_to(stations_map)
-    
+
     """FIRST VERSION (without pin description)"""
     # points = folium.features.GeoJson(stations_df.to_json())
     # stations_map.add_child(points)
@@ -117,9 +167,21 @@ def create_stations_map(stations_json):
 
 def create_sensors_df(stations_json):
     """
-    Function returns sensors DataFrame.
-    Function has been deprecated since PostgreSQL Database
-    was added to the project.
+    Function returns DataFrame of sensors.
+
+    Function has been deprecated since PostgreSQL
+    Database was added to the project.
+
+    Example:
+        In [1]: stations_json = get_stations()
+        In [2]: sensors_df = create_sensors_df(stations_json)
+                sensors_df.head()
+        Out[2]: 	station_id	sensor_id	parameter
+                0	114	        642	        NO2
+                1	114	        644	        O3
+                2	117	        660	        CO
+                3	117	        14395	    PM10
+                4	117	        658	        C6H6
     """
     sensors_dict = {}
     stations_ids = []
@@ -381,7 +443,7 @@ def return_sensors_gdf(conn):
 
 def create_readings_table(conn):
     sql =   """
-                CREATE TABLE public.readings 
+                CREATE TABLE public.readings
                 (
                     id INTEGER PRIMARY KEY,
                     sensor_id INTEGER REFERENCES sensors (sensor_id),
