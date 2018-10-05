@@ -29,8 +29,9 @@ def get_stations():
     Function returns list of dictionaries
     with requested air quality stations.
 
-    Function has been deprecated since PostgreSQL
-    Database was added to the project.
+    Notice:
+        Function has been deprecated since PostgreSQL
+        Database was added to the project.
 
     Args:
         None
@@ -42,8 +43,8 @@ def get_stations():
 
     Example:
         In [1]: stations_json = get_stations()
-        In [2]: print(stations_json[0])
-                {'id': 114,
+                stations_json[0]
+        Out[1]: {'id': 114,
                 'stationName': 'Wrocław - Bartnicza',
                 'gegrLat': '51.115933',
                 'gegrLon': '17.141125',
@@ -61,8 +62,9 @@ def create_stations_gdf(stations_json, map=False):
     """
     Function returns GeoDataFrame of air quality stations.
 
-    Function has been deprecated since PostgreSQL
-    Database was added to the project.
+    Notice:
+        Function has been deprecated since PostgreSQL
+        Database was added to the project.
 
     Args:
         stations_json (list):
@@ -80,9 +82,9 @@ def create_stations_gdf(stations_json, map=False):
 
     Example:
         In [1]: stations_json = get_stations()
-        In [2]: stations_df = create_stations_gdf(stations_json)
+                stations_df = create_stations_gdf(stations_json)
                 stations_df.head()
-        Out[2]: 	station_id	  geometry
+        Out[1]: 	station_id	  geometry
                 0   114           POINT (17.141125 51.115933)
                 1	117           POINT (17.02925 51.129378)
                 2	129	          POINT (17.012689 51.086225)
@@ -144,7 +146,7 @@ def create_stations_map(stations_json):
 
     Example:
         In [1]: stations_json = get_stations()
-        In [2]: create_stations_map(stations_json)
+                create_stations_map(stations_json)
     """
     stations_map = folium.Map([52, 19], zoom_start=6, tiles='Stamen Terrain')
 
@@ -167,16 +169,27 @@ def create_stations_map(stations_json):
 
 def create_sensors_df(stations_json):
     """
-    Function returns DataFrame of sensors.
+    Function returns DataFrame of sensors requested from GIOS API.
 
-    Function has been deprecated since PostgreSQL
-    Database was added to the project.
+    Notice:
+        Function has been deprecated since PostgreSQL
+        Database was added to the project.
+
+    Args:
+        stations_json (list):
+            list of GIOŚ air quality stations
+            represented as dictionaries
+
+    Returns:
+        sensors_df (pd.DataFrame):
+            pandas DataFrame with all available sensors.
+            Most of air monitoring stations has multiple sensors.
 
     Example:
         In [1]: stations_json = get_stations()
-        In [2]: sensors_df = create_sensors_df(stations_json)
+                sensors_df = create_sensors_df(stations_json)
                 sensors_df.head()
-        Out[2]: 	station_id	sensor_id	parameter
+        Out[1]: 	station_id	sensor_id	parameter
                 0	114	        642	        NO2
                 1	114	        644	        O3
                 2	117	        660	        CO
@@ -209,40 +222,119 @@ def create_sensors_df(stations_json):
 
 
 def get_available_parameters(sensors_df):
+    """
+    Function returns list of measured air parameters.
+
+    Notice:
+        Function has been deprecated since PostgreSQL
+        Database was added to the project.
+
+    Args:
+        stations_json (list):
+            list of GIOŚ air quality stations
+            represented as dictionaries
+
+    Returns:
+        sensors_df (pd.DataFrame):
+            pandas DataFrame with all available sensors.
+            Most of air monitoring stations has multiple sensors.
+
+    Example:
+        In [1]: stations_json = get_stations()
+                sensors_df = create_sensors_df(stations_json)
+                available_parameters = get_available_parameters(sensors_df)
+                available_parameters
+        Out[1]: ['NO2', 'O3', 'CO', 'PM10', 'C6H6', 'PM2.5', 'SO2']
+    """
     return list(sensors_df.parameter.unique())
 
 
-def get_sensor_readings(row):
+def request_sensor_data(row):
     """
-    Function is used as apply function on sensors_df DataFrame.
-    Reqested reading (latest) is added to each row.
+    Function is used as an apply function on sensors_df DataFrame.
+    Function returns latest reading.
+
+    Args:
+        row (DataFrame row)
+
+    Returns:
+        reading_value (float):
+            if requested data has proper format
+            function returns float value of readings
+        np.NaN:
+            function returns np.NaN when reading is
+            unavailable or when unexpected error occurs
+
+    Example:
+        In [1]: sensors_df['value'] = sensors_df.apply(request_sensor_data, axis=1)
     """
     sensor_id = row["sensor_id"]
-    data_json = requests.get(data_request + str(sensor_id)).json()
+    reading_json = requests.get(data_request + str(sensor_id)).json()
     count = 0
     try:
-        data = data_json["values"][count]["value"]
-        while isinstance(data, NoneType):
-            data = data_json["values"][count]["value"]
+        reading_value = reading_json["values"][count]["value"]
+        while isinstance(reading, NoneType):  # if fails try to get next reading
+            reading_value = reading_json["values"][count]["value"]
             count += 1
-        return data
+        return reading_value
     except:
         return np.NaN
 
 
 def get_latest_sensors_readings(sensors_df):
     """
-    Function returns latest available reading for each sensor.
-    It uses get_sensor_readings() function.
+    Function gets readings for each row in sensors_df DataFrame.
+    Function modifies DataFrame inplace.
+
+    Args:
+        sensors_df (pd.DataFrame):
+            pandas DataFrame with all available sensors.
+            Most of air monitoring stations has multiple sensors.
+
+    Returns:
+        sensors_df (pd.DataFrame)
+
+    Example:
+        In [1]: sensors_df = get_latest_sensors_readings(sensors_df)
+                sensors_df.head()
+        Out[1]:     station_id  sensor_id   parameter   data
+                0	114         642	        NO2	        24.16710
+                1	114	        644	        O3	        56.47060
+                2	117	        660	        CO	        508.12400
+                3	117	        14395	    PM10	    22.14980
+                4	117	        658	        C6H6	    0.26215
     """
-    sensors_df['data'] = sensors_df.apply(get_sensor_readings, axis=1)
+    sensors_df['value'] = sensors_df.apply(request_sensor_data, axis=1)
+
     return sensors_df
 
 
 def get_param_df(stations_df, sensors_df, parameter):
     """
-    Function returns pandas DataFrame with latest
-    readings for parsed parameter
+    Function returns geopandas GeoDataFrame with
+    latest readings for selected parameter.
+    Function automatically merges stations and sensors
+    DataFrames in order to create GeoDataFrame.
+
+    Args:
+        stations_df (gpd.GeoDataFrame):
+            geopandas GeoDataFrame with all
+            available air monitoring stations
+
+        sensors_df (pd.DataFrame):
+            pandas DataFrame with all available sensors.
+            Most of air monitoring stations has multiple sensors.
+
+        parameter (string):
+            one of available air quality parameters should be passed.
+            Full list of parameters could be called using
+            get_available_parameters() function.
+
+    Returns:
+        param_df (gpd.GeoDataFrame):
+            geopandas GeoDataFrame with all
+            available air monitoring stations
+            and its latests readings.
     """
 
     param_df = sensors_df[sensors_df["parameter"] == "{}".format(parameter)]
