@@ -273,7 +273,7 @@ def request_sensor_data(row):
     count = 0
     try:
         reading_value = reading_json["values"][count]["value"]
-        while isinstance(reading, NoneType):  # if fails try to get next reading
+        while isinstance(reading_value, NoneType):  # if fails try to get next reading
             reading_value = reading_json["values"][count]["value"]
             count += 1
         return reading_value
@@ -319,7 +319,7 @@ def get_param_df(stations_df, sensors_df, parameter):
     Args:
         stations_df (gpd.GeoDataFrame):
             geopandas GeoDataFrame with all
-            available air monitoring stations
+            available air monitoring stations.
 
         sensors_df (pd.DataFrame):
             pandas DataFrame with all available sensors.
@@ -335,6 +335,16 @@ def get_param_df(stations_df, sensors_df, parameter):
             geopandas GeoDataFrame with all
             available air monitoring stations
             and its latests readings.
+
+    Example:
+        In [1]: params_df = get_param_df(stations_df, sensors_df, 'PM10')
+                param_df.head()
+        Out[1]: 	station_id	 sensor_id	 parameter    value	     geometry
+                0	117	         14395       PM10	      42.9630    POINT (17.02925 51.129378)
+                1	52	         14397	     PM10	      53.9311	 POINT (16.180513 51.204503)
+                2	109	         618	     PM10	      28.3311	 POINT (16.269677 50.768729)
+                3	14	         92	         PM10	      64.2775	 POINT (14.941319 50.972167)
+                4	16	         101	     PM10	      38.4400	 POINT (16.64805 50.732817)
     """
 
     param_df = sensors_df[sensors_df["parameter"] == "{}".format(parameter)]
@@ -346,21 +356,38 @@ def get_param_df(stations_df, sensors_df, parameter):
 
 
 def show_readings_map(param_df, tile=CARTODBPOSITRON):
+    """
+    Function visualizes GeoDataFrame with
+    latest readings for selected parameter.
 
+    Args:
+        param_df (gpd.GeoDataFrame):
+            geopandas GeoDataFrame with all
+            available air monitoring stations
+            and its latests readings.
+
+        tile (bokeh.tile_providers) - default CARTODBPOSITRON:
+            one of available Bokeh tile providers
+            [CARTODBPOSITRON, STAMEN_TERRAIN, STAMEN_TONER]
+
+    Example:
+        In [1]: params_df = get_param_df(stations_df, sensors_df, 'PM10')
+                show_readings_map(params_df)
+    """
     # conversion to World Mercator needed
     param_df = param_df.to_crs(epsg=3395)
 
     # normalize data column
-    param_df["data"] = (param_df['data']-param_df['data'].mean())/param_df['data'].std()
-    param_df["data"] = (param_df['data']-param_df['data'].min())/(param_df['data'].max()-param_df['data'].min())
+    param_df["value"] = (param_df['value']-param_df['value'].mean())/param_df['value'].std()
+    param_df["value"] = (param_df['value']-param_df['value'].min())/(param_df['value'].max()-param_df['value'].min())
 
     plotting.output_notebook()
 
     # reduce differences between readings
-    size = param_df["data"] * 50
+    size = param_df["value"] * 50
     # get data resolution
     radii = np.array(size)
-    # create colors list
+    # create colors palette
     colors = ["#%02x%02x%02x" % (int(r), int(g), int(b)) for r, g, b, _ in 255*mpl.cm.RdYlGn(1-mpl.colors.Normalize()(radii))]
 
     p = plotting.figure(toolbar_location="left",
@@ -385,6 +412,13 @@ def connect_with_db():
     Function connects with PostgreSQL DataBase
     and returns connection object if connection
     was succesfully established
+
+    Returns:
+        conn (psycopg2.connection):
+            connection object for DataBase session.
+
+    Example:
+        In [1]: conn = connect_with_db()
     """
     try:
         conn = psycopg2.connect("dbname='haqs' user='postgres' host='localhost' password='postgres'")
@@ -393,17 +427,45 @@ def connect_with_db():
     except Exception as e:
         print(e)
         print("Unable to connect to the DataBase!")
-        conn.close()
 
 
 def close_db_connection(conn):
-    conn.close()
-    print("Connection has been closed!")
+    """
+    Function closes connection for DataBase session.
+
+    Args:
+        conn (psycopg2.connection):
+            connection object for DataBase session.
+
+    Example:
+        In [1]: close_db_connection(conn)
+    """
+    try:
+        conn.close()
+        print("Connection has been closed!")
+    except AttributeError:  # conn is NoneType object
+        print("There is nothing to close!")
+        print("Check your DataBase connection!")
+
 
 
 def create_postgis_extension(conn):
-    sql = "CREATE EXTENSION postgis;"
-    execute_sql(conn, sql)
+    """
+    Function creates PostGIS extension to PostgreSQL DataBase.
+
+    Args:
+        conn (psycopg2.connection):
+            connection object for DataBase session.
+
+    Example:
+        In [1]: create_postgis_extension(conn)
+    """
+    try:
+        sql = "CREATE EXTENSION postgis;"
+        execute_sql(conn, sql)
+    except AttributeError:  # conn is NoneType object
+        print("Unable to create postgis extension!")
+        print("Check your DataBase connection!")
 
 
 def execute_sql(conn, sql, *args):
