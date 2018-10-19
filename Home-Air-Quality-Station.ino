@@ -48,11 +48,11 @@ By default sensors uses following i2c addresses:
 #include <RTClib.h>
 #include <Adafruit_BME280.h>
 #include <PMS.h>
-#include <PubSubClient.h>
+#include <PubSubClient.h>  // MQTT library
 #include <WiFiMulti.h>
 #include "wifi_config.h"
 
-//HardwareSerial Serial2(2);
+HardwareSerial Serial2(2);
 
 #define ALTITUDE 219.0  // altitude in Cracow, Poland
 #define I2C_SDA 21
@@ -63,8 +63,9 @@ If the sensor does not work, try the 0x77 address as well
 or try to scan your connection with i2c scanner
 */
 
-WiFiClient espClient;  // PubSubClient instance
-PubSubClient client(espClient);
+WiFiClient espClient;
+// Comment out if you are using MQTT
+PubSubClient client(espClient);  // PubSubClient instance
 
 WiFiMulti WiFiMulti;
 
@@ -100,7 +101,7 @@ void setup()
 {
   delay(3000);  // wait 3 seconds till program begins
   Serial.begin(9600);  // GPIO1, GPIO3 (ESP32 TX/RX pins)
-  Serial2.begin(9600);  // GPIO2 (ESP32 D2 pin)
+  Serial2.begin(9600);  // GPIO17 (ESP32 TX2 pin)
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
@@ -129,7 +130,8 @@ void setup()
 
   connectWifi();
 
-  //Configure MQTT server
+  // Comment out if you are using MQTT
+  // Configure MQTT server
   client.setServer(MQTT_SERVER, MQTT_PORT);
   client.setCallback(receivedCallback);
 }
@@ -308,4 +310,35 @@ void connectWifi()
   Serial2.println("WiFi connected");
   Serial2.print("IP address: ");
   Serial2.println(WiFi.localIP());
+}
+
+void sendToThingSpeak()
+{
+  if (!client.connect(THINGSPEAK_HOST, HTTP_PORT))
+  {
+    Serial2.println("Connection failed!");
+    return;
+	}
+  else
+  {
+    String data_to_send = THINGSPEAK_API_KEY;
+    data_to_send += "&field1=";
+    data_to_send += String(t);
+    data_to_send += "\r\n\r\n";
+
+    espClient.print("POST /update HTTP/1.1\n");
+    espClient.print("Host: api.thingspeak.com\n");
+    espClient.print("Connection: close\n");
+    espClient.print("X-THINGSPEAKAPIKEY: " + THINGSPEAK_API_KEY + "\n");
+    espClient.print("Content-Type: application/x-www-form-urlencoded\n");
+    espClient.print("Content-Length: ");
+    espClient.print(data_to_send.length());
+    espClient.print("\n\n");
+    espClient.print(data_to_send);
+
+    delay(1000);
+	}
+
+  client.stop();
+  delay(5000);
 }
