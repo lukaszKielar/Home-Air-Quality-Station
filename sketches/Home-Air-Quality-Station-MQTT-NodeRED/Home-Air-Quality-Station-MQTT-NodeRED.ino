@@ -312,6 +312,7 @@ void connectWifi()
   Serial2.println(WiFi.localIP());
 }
 
+
 void sendToThingSpeak()
 {
   if (!client.connect(THINGSPEAK_HOST, HTTP_PORT))
