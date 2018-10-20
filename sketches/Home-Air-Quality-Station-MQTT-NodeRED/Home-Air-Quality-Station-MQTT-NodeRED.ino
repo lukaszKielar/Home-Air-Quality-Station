@@ -64,7 +64,6 @@ or try to scan your connection with i2c scanner
 */
 
 WiFiClient espClient;
-// Comment out if you are using MQTT
 PubSubClient client(espClient);  // PubSubClient instance
 
 WiFiMulti WiFiMulti;
@@ -88,14 +87,21 @@ char rtc_year[20];
 char rtc_hour[20];
 char rtc_minute[20];
 char rtc_second[20];
-
+float t;
+float h;
+float p;
+String rtc_string;
+String data_to_send;
+uint16_t pm1;
+uint16_t pm2_5;
+uint16_t pm10;
 long last_msg = 0;
-char pm1pt_msg[20];
-char pm2pt5_msg[20];
-char pm10pt_msg[20];
 char temp_msg[20];
 char humid_msg[20];
 char pressure_msg[20];
+char pm1pt_msg[20];
+char pm2pt5_msg[20];
+char pm10pt_msg[20];
 
 void setup()
 {
@@ -130,7 +136,6 @@ void setup()
 
   connectWifi();
 
-  // Comment out if you are using MQTT
   // Configure MQTT server
   client.setServer(MQTT_SERVER, MQTT_PORT);
   client.setCallback(receivedCallback);
@@ -157,13 +162,80 @@ void loop()
   display.drawHorizontalLine(0, 15, display.getStringWidth(rtc_string));
 
   Serial2.println("Data:");
-  readBME();  // write BME280 readings to the display and serial monitor
-  readPMS();  // write PMS7003 readings to the display and serial monitor
+
+  // read from BME280
+  t = bme.readTemperature();
+  h = bme.readHumidity();
+  p = bme.readPressure();
+  p = bme.seaLevelForAltitude(ALTITUDE,p);
+  p = p/100.0F;
+
+  if (!isnan(t))
+  {
+    Serial2.print("Temperature (*C): ");
+    Serial2.println(t);
+    display.drawString(0, 20, "Temperature " + String(t) + " [*C]");
+    snprintf (temp_msg, 20, "%lf", t);
+    client.publish("bme280/temp", temp_msg);
+  }
+
+  if (!isnan(h))
+  {
+    Serial2.print("Humidity (%): ");
+    Serial2.println(h);
+    display.drawString(0, 30, "Humidity " + String(h) + " [%]");
+    snprintf (humid_msg, 20, "%lf", h);
+    client.publish("bme280/humid", humid_msg);
+  }
+
+  if (!isnan(p))
+  {
+    Serial2.print("Pressure (hPa): ");
+    Serial2.println(p);
+    display.drawString(0, 40, "Pressure " + String(p) + " [hPa]");
+    snprintf (pressure_msg, 20, "%lf", p);
+    client.publish("bme280/pressure", pressure_msg);
+  }
+
+  // read from PMS7003
+  if (pms.readUntil(data, 5000))
+  {
+    pm1 = data.PM_AE_UG_1_0;
+    pm2_5 = data.PM_AE_UG_2_5;
+    pm10 = data.PM_AE_UG_10_0;
+
+    if (!isnan(pm1))
+    {
+      Serial2.print("PM 1.0 (ug/m3): ");
+      Serial2.println(data.PM_AE_UG_1_0);
+      //display.drawString(0, 50, "PM 1.0 " + String(data.PM_AE_UG_1_0) + " [ug/m3]");
+      snprintf (pm1pt_msg, 20, "%lu", pm1);
+      client.publish("pms7003/pm1pt", pm1pt_msg);
+    }
+
+    if (!isnan(pm2_5))
+    {
+      Serial2.print("PM 2.5 (ug/m3): ");
+      Serial2.println(data.PM_AE_UG_2_5);
+      display.drawString(0, 50, "PM 2.5 " + String(data.PM_AE_UG_2_5) + " [ug/m3]");
+      snprintf (pm2pt5_msg, 20, "%lu", pm2_5);
+      client.publish("pms7003/pm2pt5", pm2pt5_msg);
+    }
+
+    if (!isnan(pm1))
+    {
+      Serial2.print("PM 10.0 (ug/m3): ");
+      Serial2.println(data.PM_AE_UG_10_0);
+      //display.drawString(0, 50, "PM 10.0 " + String(data.PM_AE_UG_10_0) + " [ug/m3]");
+      snprintf (pm10pt_msg, 20, "%lu", pm10);
+      client.publish("pms7003/pm10pt", pm10pt_msg);
+    }
+  }
 
   display.drawString(0, 80, "Home Air Monitoring Station");
 
   Serial2.println();
-  // delay(60000);  // wait 1 minute
+
   display.display();
   delay(1000);
 }
@@ -176,60 +248,6 @@ void initBME280()
   {
     Serial2.println("Could not find a valid BME280 sensor, check wiring!");
     while (1);
-  }
-}
-
-
-void readBME()
-{
-  float t = bme.readTemperature();
-  float h = bme.readHumidity();
-  float p = bme.readPressure();
-  p = bme.seaLevelForAltitude(ALTITUDE,p);
-  p = p/100.0F;
-
-  if (!isnan(t))
-  {
-    Serial2.print("Temperature (*C): ");
-    Serial2.println(t);
-    display.drawString(0, 20, "Temperature " + String(t) + " [*C]");
-  }
-
-  if (!isnan(h))
-  {
-    Serial2.print("Humidity (%): ");
-    Serial2.println(h);
-    display.drawString(0, 30, "Humidity " + String(h) + " [%]");
-  }
-
-  if (!isnan(p))
-  {
-    Serial2.print("Pressure (hPa): ");
-    Serial2.println(p);
-    display.drawString(0, 40, "Pressure " + String(p) + " [hPa]");
-  }
-}
-
-
-void readPMS()
-{
-  if (pms.readUntil(data, 5000))
-  {
-    uint16_t pm1 = data.PM_AE_UG_1_0;
-    uint16_t pm2_5 = data.PM_AE_UG_2_5;
-    uint16_t pm10 = data.PM_AE_UG_10_0;
-
-    Serial2.print("PM 1.0 (ug/m3): ");
-    Serial2.println(data.PM_AE_UG_1_0);
-    //display.drawString(0, 50, "PM 1.0 " + String(data.PM_AE_UG_1_0) + " [ug/m3]");
-
-    Serial2.print("PM 2.5 (ug/m3): ");
-    Serial2.println(data.PM_AE_UG_2_5);
-    display.drawString(0, 50, "PM 2.5 " + String(data.PM_AE_UG_2_5) + " [ug/m3]");
-
-    Serial2.print("PM 10.0 (ug/m3): ");
-    Serial2.println(data.PM_AE_UG_10_0);
-    //display.drawString(0, 70, "PM 10.0 " + String(data.PM_AE_UG_10_0) + " [ug/m3]");
   }
 }
 
@@ -310,36 +328,4 @@ void connectWifi()
   Serial2.println("WiFi connected");
   Serial2.print("IP address: ");
   Serial2.println(WiFi.localIP());
-}
-
-
-void sendToThingSpeak()
-{
-  if (!client.connect(THINGSPEAK_HOST, HTTP_PORT))
-  {
-    Serial2.println("Connection failed!");
-    return;
-	}
-  else
-  {
-    String data_to_send = THINGSPEAK_API_KEY;
-    data_to_send += "&field1=";
-    data_to_send += String(t);
-    data_to_send += "\r\n\r\n";
-
-    espClient.print("POST /update HTTP/1.1\n");
-    espClient.print("Host: api.thingspeak.com\n");
-    espClient.print("Connection: close\n");
-    espClient.print("X-THINGSPEAKAPIKEY: " + THINGSPEAK_API_KEY + "\n");
-    espClient.print("Content-Type: application/x-www-form-urlencoded\n");
-    espClient.print("Content-Length: ");
-    espClient.print(data_to_send.length());
-    espClient.print("\n\n");
-    espClient.print(data_to_send);
-
-    delay(1000);
-	}
-
-  client.stop();
-  delay(5000);
 }

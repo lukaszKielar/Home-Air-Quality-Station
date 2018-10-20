@@ -4,6 +4,3 @@
 #define MQTT_PORT 1880
 #define MQTT_USER "mqtt_user"
 #define MQTT_PASSWORD "mqtt_password"
-#define HTTP_PORT 80  // do not change
-#define THINGSPEAK_HOST "api.thingspeak.com"  // do not change
-#define THINGSPEAK_API_KEY "XXXXXXXXXXXXXXXX"
